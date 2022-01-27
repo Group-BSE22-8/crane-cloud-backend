@@ -84,6 +84,7 @@ class AppsView(Resource):
 
         cluster = project.cluster
         namespace = project.alias
+        # namespace = "demo-project"
 
         if not cluster:
             return dict(status='fail', message="Invalid Cluster"), 500
@@ -287,7 +288,7 @@ class AppsView(Resource):
                 )
             )
 
-            ingress_name = f'{project.alias}-ingress'
+            ingress_name = f'{namespace}-ingress'
 
             # Check if there is an ingress resource in the namespace, create if not
 
@@ -1276,7 +1277,8 @@ class AppRevertView(Resource):
             )
 
             # Update the database with new url
-            updated_app = App.update(app, url=f'https://{app_sub_domain}', has_custom_domain=False)
+            updated_app = App.update(
+                app, url=f'https://{app_sub_domain}', has_custom_domain=False)
 
             if not updated_app:
                 return dict(

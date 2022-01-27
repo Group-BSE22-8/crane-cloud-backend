@@ -65,12 +65,25 @@ class ProjectsView(Resource):
             kube_token = cluster.token
 
             kube_client = create_kube_clients(kube_host, kube_token)
+            namespace_name = "demo-project"
 
             # create namespace in cluster
             cluster_namespace = kube_client.kube.create_namespace(
                 client.V1Namespace(
-                    metadata=client.V1ObjectMeta(name=namespace_name)
+                    metadata=client.V1ObjectMeta(
+                        name=namespace_name)
                 ))
+
+            # Add Liqo
+            liqo_label = {"liqo.io/enabled": "true"}
+            shared_namespace = kube_client.kube.patch_namespace(
+                name=namespace_name,
+                body=client.V1Namespace(
+                    metadata=client.V1ObjectMeta(
+                        name=namespace_name, labels=liqo_label)
+                )
+            )
+
             # create project in database
             if cluster_namespace:
 
