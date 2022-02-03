@@ -1,5 +1,5 @@
 from app.helpers.prometheus import prometheus
-from app.helpers.alias import create_alias
+from app.helpers.alias import create_alias, create_short_alias
 from app.helpers.admin import is_owner_or_admin, is_current_or_admin
 from app.helpers.role_search import has_role
 from app.helpers.kube import create_kube_clients, delete_cluster_app
@@ -49,10 +49,17 @@ class ProjectsView(Resource):
             ), 409
 
         try:
-            validated_project_data['alias'] =\
-                create_alias(validated_project_data['name'])
-            namespace_name = validated_project_data['alias']
+            is_multicluster = validated_project_data['is_multicluster']
             cluster_id = validated_project_data['cluster_id']
+
+            if is_multicluster:
+                validated_project_data['alias'] =\
+                    create_short_alias(validated_project_data['name'])
+            else:
+                validated_project_data['alias'] =\
+                    create_alias(validated_project_data['name'])
+            namespace_name = validated_project_data['alias']
+
             cluster = Cluster.get_by_id(cluster_id)
 
             if not cluster:
@@ -65,7 +72,6 @@ class ProjectsView(Resource):
             kube_token = cluster.token
 
             kube_client = create_kube_clients(kube_host, kube_token)
-            namespace_name = "demo-project"
 
             # create namespace in cluster
             cluster_namespace = kube_client.kube.create_namespace(
@@ -74,15 +80,16 @@ class ProjectsView(Resource):
                         name=namespace_name)
                 ))
 
-            # Add Liqo
-            liqo_label = {"liqo.io/enabled": "true"}
-            shared_namespace = kube_client.kube.patch_namespace(
-                name=namespace_name,
-                body=client.V1Namespace(
-                    metadata=client.V1ObjectMeta(
-                        name=namespace_name, labels=liqo_label)
+            if is_multicluster:
+                # Add Liqo
+                liqo_label = {"liqo.io/enabled": "true"}
+                kube_client.kube.patch_namespace(
+                    name=namespace_name,
+                    body=client.V1Namespace(
+                        metadata=client.V1ObjectMeta(
+                            name=namespace_name, labels=liqo_label)
+                    )
                 )
-            )
 
             # create project in database
             if cluster_namespace:
@@ -332,7 +339,7 @@ class ProjectDetailView(Resource):
             current_user_roles = get_jwt_claims()['roles']
 
             project_schema = ProjectSchema(
-                only=("name", "description", "organisation", "project_type"), partial=True)
+                only=("name", "description", "organisation", "project_type", "is_multicluster"), partial=True)
 
             project_data = request.get_json()
 
@@ -361,6 +368,43 @@ class ProjectDetailView(Resource):
 
             if not is_owner_or_admin(project, current_user_id, current_user_roles):
                 return dict(status='fail', message='unauthorised'), 403
+
+            # Work on multicluster support
+            if 'is_multicluster' in validate_project_data:
+                is_multicluster = validate_project_data['is_multicluster']
+
+                cluster = Cluster.get_by_id(project.cluster_id)
+                if not cluster:
+                    return dict(
+                        status='fail',
+                        message=f'cluster {project.cluster_id} not found'
+                    ), 404
+
+                kube_host = cluster.host
+                kube_token = cluster.token
+                kube_client = create_kube_clients(kube_host, kube_token)
+
+                if is_multicluster and project.is_multicluster != True:
+                    liqo_label = {"liqo.io/enabled": "true",
+                                  "liqo.io/scheduling-enabled": "true"}
+                    kube_client.kube.patch_namespace(
+                        name=project.alias,
+                        body=client.V1Namespace(
+                            metadata=client.V1ObjectMeta(
+                                name=project.alias, labels=liqo_label)
+                        )
+                    )
+
+                if is_multicluster == False and project.is_multicluster == True:
+                    new_label = {"liqo.io/enabled": "false",
+                                 "liqo.io/scheduling-enabled": "false"}
+                    kube_client.kube.patch_namespace(
+                        name=project.alias,
+                        body=client.V1Namespace(
+                            metadata=client.V1ObjectMeta(
+                                name=project.alias, labels=new_label)
+                        )
+                    )
 
             updated = Project.update(project, **validate_project_data)
 

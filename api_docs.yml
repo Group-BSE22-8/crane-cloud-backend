@@ -1373,6 +1373,8 @@ paths:
                             type: string
                         project_type:
                             type: string
+                        is_multicluster:
+                            type: boolean
             produces:
                 - application/json
             responses:
@@ -1461,6 +1463,8 @@ paths:
                             type: string
                         project_type:
                             type: string
+                        is_multicluster:
+                            type: boolean
             responses:
                 200:
                     description: "Success"

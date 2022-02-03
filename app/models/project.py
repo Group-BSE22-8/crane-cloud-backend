@@ -18,5 +18,6 @@ class Project(ModelMixin):
     organisation = db.Column(db.String)
     project_type = db.Column(db.String)
     date_created = db.Column(db.DateTime, default=db.func.current_timestamp())
+    is_multicluster = db.Column(db.Boolean, default=False)
     project_databases = db.relationship(
         'ProjectDatabase', backref='project', lazy=True)
