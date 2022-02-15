@@ -7,7 +7,6 @@ from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt_claims
 from flask_restful import Resource, request
 from kubernetes import client
 from prometheus_http_client import Prometheus
-
 from app.helpers.admin import is_owner_or_admin
 from app.helpers.alias import create_alias
 from app.helpers.clean_up import resource_clean_up
