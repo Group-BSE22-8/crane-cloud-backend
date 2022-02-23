@@ -21,3 +21,5 @@ class Project(ModelMixin):
     is_multicluster = db.Column(db.Boolean, default=False)
     project_databases = db.relationship(
         'ProjectDatabase', backref='project', lazy=True)
+    clusters = db.relationship('ProjectCluster', backref='project', lazy=True)
+    
