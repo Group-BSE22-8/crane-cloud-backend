@@ -2,6 +2,7 @@ from sqlalchemy import inspect, func, column
 from sqlalchemy.exc import SQLAlchemyError
 from ..models import db
 
+
 class ModelMixin(db.Model):
 
     __abstract__ = True

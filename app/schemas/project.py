@@ -2,6 +2,10 @@ from marshmallow import Schema, fields, validate
 from app.helpers.age_utility import get_item_age
 
 
+# class ProjectClustersSchema(Schema):
+#     cluster_id = fields.UUID()
+
+
 class ProjectSchema(Schema):
 
     id = fields.UUID(dump_only=True)
@@ -24,6 +28,7 @@ class ProjectSchema(Schema):
     date_created = fields.Date(dump_only=True)
     age = fields.Method("get_age", dump_only=True)
     is_multicluster = fields.Boolean()
+    # project_clusters = fields.Nested("ProjectClusterSchema", many=True)
 
     def get_age(self, obj):
         return get_item_age(obj.date_created)
