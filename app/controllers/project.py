@@ -110,7 +110,7 @@ class ProjectsView(Resource):
                                 message=f'cluster {cluster_id} not found'
                             ), 404
 
-                        if cluster.id != liqo_cluster.id:
+                        if cluster.id != liqo_cluster.id and liqo_cluster.liqo_name:
                             cluster_list.append(liqo_cluster)
                             liqo_clusters.append(
                                 str(liqo_cluster.liqo_name))
@@ -164,7 +164,7 @@ class ProjectsView(Resource):
                                 service=client.V1IngressServiceBackend(
                                     name="traefik-web-ui-ext",
                                     port=client.V1ServiceBackendPort(
-                                        name='http'
+                                        number=80
                                     )
                                 )
                             )
@@ -400,7 +400,7 @@ class ProjectDetailView(Resource):
             current_user_roles = get_jwt_claims()['roles']
 
             project_schema = ProjectSchema(
-                only=("name", "description", "organisation", "project_type", "is_multicluster"), partial=True)
+                only=("name", "description", "organisation", "project_type", "is_multicluster", "project_clusters"), partial=True)
 
             project_data = request.get_json()
 
@@ -430,7 +430,12 @@ class ProjectDetailView(Resource):
             if not is_owner_or_admin(project, current_user_id, current_user_roles):
                 return dict(status='fail', message='unauthorised'), 403
 
+            project_clusters = validate_project_data.get(
+                'project_clusters', None)
+            validate_project_data.pop('project_clusters', None)
+
             # Work on multicluster support
+            cluster_list = []
             if 'is_multicluster' in validate_project_data:
                 is_multicluster = validate_project_data['is_multicluster']
 
@@ -445,7 +450,7 @@ class ProjectDetailView(Resource):
                 kube_token = cluster.token
                 kube_client = create_kube_clients(kube_host, kube_token)
 
-                if is_multicluster and project.is_multicluster != True:
+                if is_multicluster:
                     liqo_label = {"liqo.io/enabled": "true",
                                   "liqo.io/scheduling-enabled": "true"}
                     kube_client.kube.patch_namespace(
@@ -455,6 +460,56 @@ class ProjectDetailView(Resource):
                                 name=project.alias, labels=liqo_label)
                         )
                     )
+
+                    cluster_list.append(cluster)
+                    liqo_clusters = [str(cluster.id)]
+                    namespace_name = project.alias
+
+                    # Add selective scheduling
+                    if project_clusters:
+                        for cluster_item in project_clusters:
+                            cluster_id = cluster_item['cluster_id']
+                            liqo_cluster = Cluster.get_by_id(cluster_id)
+                            if not liqo_cluster:
+                                return dict(
+                                    status='fail',
+                                    message=f'cluster with id {cluster_id} not found'
+                                ), 404
+
+                            if cluster.id != liqo_cluster.id and liqo_cluster.liqo_name:
+                                cluster_list.append(liqo_cluster)
+                                liqo_clusters.append(
+                                    str(liqo_cluster.liqo_name))
+
+                        resource_api = kube_client.dynamicApi.resources.get(
+                            api_version='offloading.liqo.io/v1alpha1',
+                            kind='NamespaceOffloading')
+
+                        offloads = kube_client.dynamicApi.get(
+                            resource_api, name="offloading", namespace=namespace_name)
+
+                        resource_api.delete(
+                            name="offloading", namespace=namespace_name)
+
+                        # Create new offloader
+                        offloads.spec.clusterSelector.nodeSelectorTerms[
+                            0].matchExpressions = [{
+                                "key": "liqo.io/remote-cluster-id",
+                                "operator": "In",
+                                "values": liqo_clusters
+                            }]
+                        offloads.status.remoteNamespaceName = namespace_name
+                        offloads.spec.namespaceMappingStrategy = 'EnforceSameName'
+                        offloads.metadata.pop('creationTimestamp', None)
+                        offloads.metadata.pop('resourceVersion', None)
+                        # Wait for successful deletion
+                        watcher = watch.Watch()
+                        for event in resource_api.watch(resource_version=0,  timeout=30, namespace=namespace_name, watcher=watcher):
+                            if event['type'] == 'DELETED':
+                                watcher.stop()
+
+                        resource_api.create(
+                            body=offloads, namespace=namespace_name)
 
                 if is_multicluster == False and project.is_multicluster == True:
                     new_label = {"liqo.io/enabled": "false",
@@ -467,7 +522,11 @@ class ProjectDetailView(Resource):
                         )
                     )
 
-            updated = Project.update(project, **validate_project_data)
+            if is_multicluster and project_clusters:
+                updated = Project.update(
+                    project, clusters=cluster_list, **validate_project_data)
+            else:
+                updated = Project.update(project,  **validate_project_data)
 
             if not updated:
                 return dict(status='fail', message='internal server error'), 500

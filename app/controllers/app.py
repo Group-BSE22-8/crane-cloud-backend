@@ -273,15 +273,20 @@ class AppsView(Resource):
 
             # create new ingress rule for the application
             new_ingress_backend = client.V1IngressBackend(
-                service_name=service_name,
-                service_port=3000
+                service=client.V1IngressServiceBackend(
+                    name=service_name,
+                    port=client.V1ServiceBackendPort(
+                        number=3000
+                    )
+                )
             )
 
-            new_ingress_rule = client.ExtensionsV1beta1IngressRule(
+            new_ingress_rule = client.V1IngressRule(
                 host=sub_domain,
                 http=client.V1HTTPIngressRuleValue(
                     paths=[client.V1HTTPIngressPath(
                         path="",
+                        path_type="ImplementationSpecific",
                         backend=new_ingress_backend
                     )]
                 )
@@ -300,12 +305,12 @@ class AppsView(Resource):
                     name=ingress_name
                 )
 
-                ingress_spec = client.ExtensionsV1beta1IngressSpec(
+                ingress_spec = client.V1IngressSpec(
                     # backend=ingress_backend,
                     rules=[new_ingress_rule]
                 )
 
-                ingress_body = client.ExtensionsV1beta1Ingress(
+                ingress_body = client.V1Ingress(
                     metadata=ingress_meta,
                     spec=ingress_spec
                 )
@@ -629,15 +634,20 @@ class ProjectAppsView(Resource):
 
             # create new ingres rule for the application
             new_ingress_backend = client.V1IngressBackend(
-                service_name=service_name,
-                service_port=3000
+                service=client.V1IngressServiceBackend(
+                    name=service_name,
+                    port=client.V1ServiceBackendPort(
+                        number=3000
+                    )
+                )
             )
 
-            new_ingress_rule = client.ExtensionsV1beta1IngressRule(
+            new_ingress_rule = client.V1IngressRule(
                 host=sub_domain,
                 http=client.V1HTTPIngressRuleValue(
                     paths=[client.V1HTTPIngressPath(
                         path="",
+                        path_type="ImplementationSpecific",
                         backend=new_ingress_backend
                     )]
                 )
@@ -656,12 +666,12 @@ class ProjectAppsView(Resource):
                     name=ingress_name
                 )
 
-                ingress_spec = client.ExtensionsV1beta1IngressSpec(
+                ingress_spec = client.V1IngressSpec(
                     # backend=ingress_backend,
                     rules=[new_ingress_rule]
                 )
 
-                ingress_body = client.ExtensionsV1beta1Ingress(
+                ingress_body = client.V1Ingress(
                     metadata=ingress_meta,
                     spec=ingress_spec
                 )
@@ -1087,15 +1097,20 @@ class AppDetailView(Resource):
                 ingress_name = f'{project.alias}-ingress'
 
                 new_ingress_backend = client.V1IngressBackend(
-                    service_name=service_name,
-                    service_port=3000
+                    service=client.V1IngressServiceBackend(
+                        name=service_name,
+                        port=client.V1ServiceBackendPort(
+                            number=3000
+                        )
+                    )
                 )
 
-                new_ingress_rule = client.ExtensionsV1beta1IngressRule(
+                new_ingress_rule = client.V1IngressRule(
                     host=custom_domain,
                     http=client.V1HTTPIngressRuleValue(
                         paths=[client.V1HTTPIngressPath(
                             path="",
+                            path_type="ImplementationSpecific",
                             backend=new_ingress_backend
                         )]
                     )
@@ -1248,15 +1263,20 @@ class AppRevertView(Resource):
             if not newUrl:
                 # Create a new ingress rule with app Alias
                 new_ingress_backend = client.V1IngressBackend(
-                    service_name=service_name,
-                    service_port=3000
+                    service=client.V1IngressServiceBackend(
+                        name=service_name,
+                        port=client.V1ServiceBackendPort(
+                            number=3000
+                        )
+                    )
                 )
 
-                new_ingress_rule = client.ExtensionsV1beta1IngressRule(
+                new_ingress_rule = client.V1IngressRule(
                     host=app_sub_domain,
                     http=client.V1HTTPIngressRuleValue(
                         paths=[client.V1HTTPIngressPath(
                             path="",
+                            path_type="ImplementationSpecific",
                             backend=new_ingress_backend
                         )]
                     )
