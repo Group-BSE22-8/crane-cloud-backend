@@ -27,7 +27,7 @@ itsdangerous==1.1.0
 Jinja2==2.10.1
 keyring==10.6.0
 keyrings.alt==3.0
-kubernetes==10.0.0
+kubernetes==22.6.0
 Mako==1.0.10
 MarkupSafe==1.1.1
 mysql-connector==2.2.9

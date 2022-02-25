@@ -1375,6 +1375,13 @@ paths:
                             type: string
                         is_multicluster:
                             type: boolean
+                        project_clusters:
+                            type: array
+                            items:
+                                type: object
+                                properties:
+                                    cluster_id:
+                                        type: string
             produces:
                 - application/json
             responses:

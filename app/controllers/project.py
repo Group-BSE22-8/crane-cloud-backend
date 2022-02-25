@@ -1,3 +1,4 @@
+from tokenize import group
 from app.helpers.prometheus import prometheus
 from app.helpers.alias import create_alias, create_short_alias
 from app.helpers.admin import is_owner_or_admin, is_current_or_admin
@@ -6,7 +7,7 @@ from app.helpers.kube import create_kube_clients, delete_cluster_app
 from app.models.user import User
 from app.models.clusters import Cluster
 from app.models.project import Project
-from app.schemas import ProjectSchema, MetricsSchema
+from app.schemas import ProjectSchema, MetricsSchema, ProjectDetailsSchema
 import datetime
 from prometheus_http_client import Prometheus
 import json
@@ -14,6 +15,7 @@ from flask_restful import Resource, request
 from kubernetes import client
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt_claims
 from app.helpers.db_flavor import get_db_flavour
+from kubernetes import watch
 
 
 class ProjectsView(Resource):
@@ -51,6 +53,9 @@ class ProjectsView(Resource):
         try:
             is_multicluster = validated_project_data['is_multicluster']
             cluster_id = validated_project_data['cluster_id']
+            project_clusters = validated_project_data.get(
+                'project_clusters', None)
+            validated_project_data.pop('project_clusters', None)
 
             if is_multicluster:
                 validated_project_data['alias'] =\
@@ -80,7 +85,7 @@ class ProjectsView(Resource):
                         name=namespace_name)
                 ))
 
-            if is_multicluster:
+            if is_multicluster and cluster.liqo_name:
                 # Add Liqo
                 liqo_label = {"liqo.io/enabled": "true"}
                 kube_client.kube.patch_namespace(
@@ -91,6 +96,55 @@ class ProjectsView(Resource):
                     )
                 )
 
+                cluster_list = [cluster]
+                liqo_clusters = [str(cluster.id)]
+
+                # Add selective scheduling
+                if project_clusters:
+                    for cluster_item in project_clusters:
+                        cluster_id = cluster_item['cluster_id']
+                        liqo_cluster = Cluster.get_by_id(cluster_id)
+                        if not liqo_cluster:
+                            return dict(
+                                status='fail',
+                                message=f'cluster {cluster_id} not found'
+                            ), 404
+
+                        if cluster.id != liqo_cluster.id:
+                            cluster_list.append(liqo_cluster)
+                            liqo_clusters.append(
+                                str(liqo_cluster.liqo_name))
+
+                    resource_api = kube_client.dynamicApi.resources.get(
+                        api_version='offloading.liqo.io/v1alpha1',
+                        kind='NamespaceOffloading')
+
+                    offloads = kube_client.dynamicApi.get(
+                        resource_api, name="offloading", namespace=namespace_name)
+
+                    resource_api.delete(
+                        name="offloading", namespace=namespace_name)
+
+                    # Create new offloader
+                    offloads.spec.clusterSelector.nodeSelectorTerms[
+                        0].matchExpressions = [{
+                            "key": "liqo.io/remote-cluster-id",
+                            "operator": "In",
+                            "values": liqo_clusters
+                        }]
+                    offloads.status.remoteNamespaceName = namespace_name
+                    offloads.spec.namespaceMappingStrategy = 'EnforceSameName'
+                    offloads.metadata.pop('creationTimestamp', None)
+                    offloads.metadata.pop('resourceVersion', None)
+                    # Wait for successful deletion
+                    watcher = watch.Watch()
+                    for event in resource_api.watch(resource_version=0,  timeout=30, namespace=namespace_name, watcher=watcher):
+                        if event['type'] == 'DELETED':
+                            watcher.stop()
+
+                    resource_api.create(
+                        body=offloads, namespace=namespace_name)
+
             # create project in database
             if cluster_namespace:
 
@@ -100,24 +154,29 @@ class ProjectsView(Resource):
                     name=ingress_name
                 )
 
-                ingress_default_rule = client.ExtensionsV1beta1IngressRule(
+                ingress_default_rule = client.V1IngressRule(
                     host="traefik-ui.cranecloud.io",
-                    http=client.ExtensionsV1beta1HTTPIngressRuleValue(
-                        paths=[client.ExtensionsV1beta1HTTPIngressPath(
+                    http=client.V1HTTPIngressRuleValue(
+                        paths=[client.V1HTTPIngressPath(
                             path="/*",
-                            backend=client.ExtensionsV1beta1IngressBackend(
-                                service_name="traefik-web-ui-ext",
-                                service_port=80
+                            path_type="ImplementationSpecific",
+                            backend=client.V1IngressBackend(
+                                service=client.V1IngressServiceBackend(
+                                    name="traefik-web-ui-ext",
+                                    port=client.V1ServiceBackendPort(
+                                        name='http'
+                                    )
+                                )
                             )
                         )]
                     )
                 )
 
-                ingress_spec = client.ExtensionsV1beta1IngressSpec(
+                ingress_spec = client.V1IngressSpec(
                     rules=[ingress_default_rule]
                 )
 
-                ingress_body = client.ExtensionsV1beta1Ingress(
+                ingress_body = client.V1Ingress(
                     metadata=ingress_meta,
                     spec=ingress_spec
                 )
@@ -126,8 +185,10 @@ class ProjectsView(Resource):
                     namespace=namespace_name,
                     body=ingress_body
                 )
-
                 project = Project(**validated_project_data)
+
+                if is_multicluster and project_clusters:
+                    project.clusters = cluster_list
 
                 saved = project.save()
 
@@ -148,7 +209,7 @@ class ProjectsView(Resource):
         except Exception as err:
             return dict(status='fail', message=str(err)), 500
 
-    @jwt_required
+    @ jwt_required
     def get(self):
         """
         """
@@ -173,14 +234,14 @@ class ProjectsView(Resource):
 
 class ProjectDetailView(Resource):
 
-    @jwt_required
+    @ jwt_required
     def get(self, project_id):
         """
         """
         current_user_id = get_jwt_identity()
         current_user_roles = get_jwt_claims()['roles']
 
-        project_schema = ProjectSchema()
+        project_schema = ProjectDetailsSchema()
 
         project = Project.get_by_id(project_id)
 
@@ -201,7 +262,7 @@ class ProjectDetailView(Resource):
         return dict(status='success', data=dict(
             project=json.loads(project_data))), 200
 
-    @jwt_required
+    @ jwt_required
     def delete(self, project_id):
         """
         """
@@ -329,7 +390,7 @@ class ProjectDetailView(Resource):
         except Exception as e:
             return dict(status='fail', message=str(e)), 500
 
-    @jwt_required
+    @ jwt_required
     def patch(self, project_id):
         """
         """
@@ -422,7 +483,7 @@ class ProjectDetailView(Resource):
 
 class UserProjectsView(Resource):
 
-    @jwt_required
+    @ jwt_required
     def get(self, user_id):
         """
         """
@@ -454,7 +515,7 @@ class UserProjectsView(Resource):
 
 class ProjectMemoryUsageView(Resource):
 
-    @jwt_required
+    @ jwt_required
     def post(self, project_id):
 
         project_memory_schema = MetricsSchema()
@@ -509,7 +570,7 @@ class ProjectMemoryUsageView(Resource):
 
 
 class ProjectCPUView(Resource):
-    @jwt_required
+    @ jwt_required
     def post(self, project_id):
         current_user_id = get_jwt_identity()
         current_user_roles = get_jwt_claims()['roles']
@@ -567,7 +628,7 @@ class ProjectCPUView(Resource):
 
 
 class ProjectNetworkRequestView(Resource):
-    @jwt_required
+    @ jwt_required
     def post(self, project_id):
         current_user_id = get_jwt_identity()
         current_user_roles = get_jwt_claims()['roles']
@@ -625,7 +686,7 @@ class ProjectNetworkRequestView(Resource):
 
 
 class ProjectStorageUsageView(Resource):
-    @jwt_required
+    @ jwt_required
     def post(self, project_id):
 
         current_user_id = get_jwt_identity()

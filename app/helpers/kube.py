@@ -1,6 +1,7 @@
 import os
 from types import SimpleNamespace
 from kubernetes import client
+from kubernetes import dynamic
 
 
 def create_kube_clients(kube_host=os.getenv('KUBE_HOST'), kube_token=os.getenv('KUBE_TOKEN')):
@@ -15,10 +16,12 @@ def create_kube_clients(kube_host=os.getenv('KUBE_HOST'), kube_token=os.getenv('
     # create API instance
     api_client = client.ApiClient()
     kube = client.CoreV1Api(client.ApiClient(config))
-    extension_api = client.ExtensionsV1beta1Api(client.ApiClient(config))
+    extension_api = client.NetworkingV1Api(client.ApiClient(config))
     appsv1_api = client.AppsV1Api(client.ApiClient(config))
     batchv1_api = client.BatchV1Api(client.ApiClient(config))
     storageV1Api = client.StorageV1Api(client.ApiClient(config))
+    dynamicApi = dynamic.DynamicClient(client.ApiClient(config))
+    custom_objects_api = client.CustomObjectsApi(client.ApiClient(config))
 
     # return kube, extension_api, appsv1_api, api_client, batchv1_api, storageV1Api
     return SimpleNamespace(
@@ -27,7 +30,9 @@ def create_kube_clients(kube_host=os.getenv('KUBE_HOST'), kube_token=os.getenv('
         appsv1_api=appsv1_api,
         api_client=api_client,
         batchv1_api=batchv1_api,
-        storageV1Api=storageV1Api
+        storageV1Api=storageV1Api,
+        dynamicApi=dynamicApi,
+        custom_objects_api=custom_objects_api
     )
 
 

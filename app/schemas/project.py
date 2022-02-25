@@ -1,9 +1,16 @@
+from unicodedata import name
 from marshmallow import Schema, fields, validate
 from app.helpers.age_utility import get_item_age
+from app.models import clusters
 
 
-# class ProjectClustersSchema(Schema):
-#     cluster_id = fields.UUID()
+class ProjectClustersInputSchema(Schema):
+    cluster_id = fields.UUID()
+
+
+class ProjectClustersOutputSchema(Schema):
+    id = fields.UUID()
+    name = fields.String()
 
 
 class ProjectSchema(Schema):
@@ -28,7 +35,14 @@ class ProjectSchema(Schema):
     date_created = fields.Date(dump_only=True)
     age = fields.Method("get_age", dump_only=True)
     is_multicluster = fields.Boolean()
-    # project_clusters = fields.Nested("ProjectClusterSchema", many=True)
+
+    project_clusters = fields.Nested(
+        "ProjectClustersInputSchema", many=True, load_only=True)
 
     def get_age(self, obj):
         return get_item_age(obj.date_created)
+
+
+class ProjectDetailsSchema(ProjectSchema):
+    clusters = fields.Nested("ProjectClustersOutputSchema",
+                             many=True, dump_only=True)
