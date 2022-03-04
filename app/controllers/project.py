@@ -482,6 +482,11 @@ class ProjectDetailView(Resource):
                             cluster_list.append(liqo_cluster)
                             liqo_clusters.append(
                                 str(liqo_cluster.liqo_name))
+                        else:
+                            return dict(
+                                status='fail',
+                                message=f'cluster {cluster_id} does not support multi-cluster'
+                            ), 409
 
                     resource_api = kube_client.dynamicApi.resources.get(
                         api_version='offloading.liqo.io/v1alpha1',
