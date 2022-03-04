@@ -144,6 +144,11 @@ class ProjectsView(Resource):
 
                     resource_api.create(
                         body=offloads, namespace=namespace_name)
+                else:
+                    clusters = Cluster.find_all()
+                    for cluster_item in clusters:
+                        if cluster_item != cluster and cluster_item.liqo_name:
+                            cluster_list.append(cluster_item)
 
             # create project in database
             if cluster_namespace:
@@ -187,7 +192,7 @@ class ProjectsView(Resource):
                 )
                 project = Project(**validated_project_data)
 
-                if is_multicluster and project_clusters:
+                if is_multicluster:
                     project.clusters = cluster_list
 
                 saved = project.save()
@@ -517,6 +522,12 @@ class ProjectDetailView(Resource):
 
                     resource_api.create(
                         body=offloads, namespace=namespace_name)
+                else:
+                    clusters = Cluster.find_all()
+                    for cluster_item in clusters:
+                        if cluster_item != cluster and cluster_item.liqo_name:
+                            cluster_list.append(cluster_item)
+
             if not is_multicluster:
                 # Add Liqo
                 liqo_label = {"liqo.io/enabled": "false",
@@ -530,7 +541,7 @@ class ProjectDetailView(Resource):
                 )
                 project.clusters.clear()
 
-            if is_multicluster and project_clusters:
+            if is_multicluster:
                 updated = Project.update(
                     project, clusters=cluster_list, **validate_project_data)
             else:
