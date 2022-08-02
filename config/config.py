@@ -20,7 +20,7 @@ class Base:
     MAIL_PASSWORD = os.getenv("APP_MAIL_PASSWORD")
 
     # mail accounts
-    MAIL_DEFAULT_SENDER = "no-reply@cranecloud.io"
+    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER") or "no-reply@cranecloud.io"
 
     # EXCEPTIONS 
     PROPAGATE_EXCEPTIONS = True
