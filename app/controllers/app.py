@@ -19,7 +19,7 @@ from app.models.app import App
 from app.models.user import User
 from app.models.clusters import Cluster
 from app.models.project import Project
-from app.schemas import AppSchema, MetricsSchema, PodsLogsSchema, AppGraphSchema
+from app.schemas import AppSchema, MetricsSchema, PodsLogsSchema, AppGraphSchema, StatusSchema
 
 
 class AppsView(Resource):
@@ -1709,4 +1709,78 @@ class AppDataSummaryView(Resource):
             data=dict(
                 metadata=dict(total_apps=total_apps),
                 graph_data=app_info)
+        ), 200
+
+
+class AppStatusView(Resource):
+
+    #@admin_required
+    def patch(self):
+
+        status_schema = StatusSchema()
+        app_data = request.get_json()
+        validated_update_data, errors = status_schema.load(app_data)
+
+        if errors:
+          return dict(status='fail', message=errors), 400
+
+        # check for existing project based on and id
+        app = App.get_by_id(validated_update_data['id'])
+
+        if app:
+            if 'id' in validated_update_data:
+                app.status = validated_update_data['status']
+                updated_app = app.save()
+            
+                if not updated_app:
+                    return dict(status='fail', message='Internal Server Error'), 500
+
+ 
+            return dict(
+                status="success",
+                message=f"App status updated successfully"
+            ), 200
+
+        else:
+            return dict(
+                status='fail',
+                message=f'App does not exists'
+            ), 404
+
+
+
+class AppCountView(Resource):
+
+    #@admin_required
+    def get(self):
+        app_schema = AppSchema(many=True)
+
+        apps = App.find_all()
+        app_data, errors = app_schema.dumps(apps)
+
+        #if errors:
+        #  return dict(status='fail', message=errors), 400
+
+        app_data_list = json.loads(app_data)
+
+        active = 0
+        inactive = 0
+        deleted = 0
+
+        for app in app_data_list:
+            if app["status"] == 1:
+               active = active + 1
+            
+            elif app["status"] == 0:
+               inactive = inactive + 1
+        
+            elif app["status"] == 5:
+               deleted = deleted + 1
+
+        return dict(
+            status='success',
+            data=dict(
+                active=active,
+                inactive=inactive,
+                deleted=deleted)
         ), 200

@@ -3,7 +3,7 @@ import os
 from flask import current_app
 from flask_restful import Resource, request
 from flask_bcrypt import Bcrypt
-from app.schemas import UserSchema, UserGraphSchema
+from app.schemas import UserSchema, UserGraphSchema, StatusSchema, ProjectSchema, AppSchema
 from app.models.user import User
 from app.models.role import Role
 from app.helpers.confirmation import send_verification
@@ -742,4 +742,105 @@ class UserDataSummaryView(Resource):
             data=dict(
                 metadata=dict(total_users=total_users),
                 graph_data=user_info)
+        ), 200
+
+
+
+class UserStatusView(Resource):
+
+    #@admin_required
+    def patch(self):
+
+        status_schema = StatusSchema()
+        project_schema = ProjectSchema(many=True)
+        app_schema = AppSchema(many=True)
+
+        user_data = request.get_json()
+        validated_update_data, errors = status_schema.load(user_data)
+
+        if errors:
+          return dict(status='fail', message=errors), 400
+
+
+        # check for existing user based on and id
+        user = User.get_by_id(validated_update_data['id'])
+
+        if user:
+            if 'id' in validated_update_data:
+                user.status = validated_update_data['status']
+                updated_user = user.save()
+            
+                if not updated_user:
+                    return dict(status='fail', message='Internal Server Error'), 500
+
+
+                projects = Project.find_all(owner_id=validated_update_data['id'])
+                project_data, errors = project_schema.dumps(projects)
+
+                project_data_list = json.loads(project_data)
+                #return dict(status='fail', message=project_data_list), 500
+
+                for proj in project_data_list:
+                    project = Project.get_by_id(proj['id'])
+                    project.status = validated_update_data['status']
+                    updated_project = project.save()
+                
+                    if not updated_project:
+                        return dict(status='fail', message='Internal Server Error'), 500
+
+                    # check for existing apps based on and id
+                    apps = App.find_all(project_id=proj['id'])
+                    app_data, errors = app_schema.dumps(apps)
+                    app_data_list = json.loads(app_data)
+
+                    for app_data in app_data_list:
+                        app = App.get_by_id(app_data['id'])
+                        app.status = validated_update_data['status']
+                        updated_app = app.save()
+                    
+                        if not updated_app:
+                            return dict(status='fail', message='Internal Server Error'), 500
+
+                return dict(
+                    status="success",
+                    message=f"User status updated successfully"
+                ), 200
+
+        else:
+            return dict(
+                status='fail',
+                message=f'User does not exists'
+            ), 404
+
+
+
+class UserCountView(Resource):
+
+    #@admin_required
+    def get(self):
+        user_schema = UserSchema(many=True)
+
+        users = User.find_all()
+        user_data, errors = user_schema.dumps(users)
+
+        if errors:
+          return dict(status='fail', message=errors), 400
+
+        user_data_list = json.loads(user_data)
+
+        active = 0
+        inactive = 0
+
+        for user in user_data_list:
+            if user["status"] == 1:
+               active = active + 1
+            
+            elif user["status"] == 0:
+               inactive = inactive + 1
+        
+        return dict(
+            status='success',
+            data=dict(
+                active=active,
+                inactive=inactive)
         ), 200
