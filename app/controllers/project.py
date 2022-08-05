@@ -611,10 +611,6 @@ class ProjectStorageUsageView(Resource):
         return dict(status='success', data=dict(storage_capacity=values, storage_percentage_usage=volume_perc_value)), 200
 
 
-<<<<<<< HEAD
-
-=======
->>>>>>> master
 class ProjectStatusView(Resource):
 
     #@admin_required
