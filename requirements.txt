@@ -54,7 +54,7 @@ packaging==21.3
 pluggy==1.0.0
 prometheus-http-client==1.0.0
 prompt-toolkit==3.0.20
-psycopg2==2.8.4
+psycopg2-binary==2.8.4
 py==1.11.0
 pyasn1==0.4.5
 pyasn1-modules==0.2.5

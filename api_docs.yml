@@ -2,6 +2,94 @@
 basepath: "/"
 
 paths:
+    "/app/status":
+        patch:
+            tags:
+                - app_status
+            consumes:
+                - application/json
+            parameters:
+                - in: body
+                  name: app_status
+                  schema:
+                    type: object
+                    required:
+                        - id
+                        - status
+                    properties:
+                        id:
+                            type: string
+                        status:
+                            type: integer
+            produces:
+                - application/json
+            responses:
+                201:
+                    description: "Success"
+                400:
+                    description: "Bad request"
+                500:
+                    description: "Internal Server Error"
+
+    "/project/status":
+        patch:
+            tags:
+                - project_status
+            consumes:
+                - application/json
+            parameters:
+                - in: body
+                  name: project_status
+                  schema:
+                    type: object
+                    required:
+                        - id
+                        - status
+                    properties:
+                        id:
+                            type: string
+                        status:
+                            type: integer
+            produces:
+                - application/json
+            responses:
+                201:
+                    description: "Success"
+                400:
+                    description: "Bad request"
+                500:
+                    description: "Internal Server Error"
+
+
+    "/user/status":
+        patch:
+            tags:
+                - user_status
+            consumes:
+                - application/json
+            parameters:
+                - in: body
+                  name: user_status
+                  schema:
+                    type: object
+                    required:
+                        - id
+                        - status
+                    properties:
+                        id:
+                            type: string
+                        status:
+                            type: integer
+            produces:
+                - application/json
+            responses:
+                201:
+                    description: "Success"
+                400:
+                    description: "Bad request"
+                500:
+                    description: "Internal Server Error"
+
     "/users":
         post:
             tags:

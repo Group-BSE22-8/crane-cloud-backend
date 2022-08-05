@@ -6,6 +6,7 @@ from app.helpers.kube import create_kube_clients, delete_cluster_app
 from app.models.user import User
 from app.models.clusters import Cluster
 from app.models.project import Project
+from app.models.app import App
 from app.schemas import ProjectSchema, MetricsSchema, StatusSchema, AppSchema
 import datetime
 from prometheus_http_client import Prometheus
@@ -610,7 +611,10 @@ class ProjectStorageUsageView(Resource):
         return dict(status='success', data=dict(storage_capacity=values, storage_percentage_usage=volume_perc_value)), 200
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> master
 class ProjectStatusView(Resource):
 
     #@admin_required

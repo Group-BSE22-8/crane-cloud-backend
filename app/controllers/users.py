@@ -5,6 +5,8 @@ from flask_restful import Resource, request
 from flask_bcrypt import Bcrypt
 from app.schemas import UserSchema, UserGraphSchema, StatusSchema, ProjectSchema, AppSchema
 from app.models.user import User
+from app.models.project import Project
+from app.models.app import App
 from app.models.role import Role
 from app.helpers.confirmation import send_verification
 from app.helpers.token import validate_token
@@ -743,7 +745,6 @@ class UserDataSummaryView(Resource):
                 metadata=dict(total_users=total_users),
                 graph_data=user_info)
         ), 200
-
 
 
 class UserStatusView(Resource):
