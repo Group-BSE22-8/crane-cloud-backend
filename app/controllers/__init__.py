@@ -4,7 +4,7 @@ from .index import IndexView
 from .users import (
     UsersView, UserLoginView, UserEmailVerificationView,
     EmailVerificationRequest, ForgotPasswordView, ResetPasswordView,
-    UserDetailView, AdminLoginView, OAuthView, UserDataSummaryView, UserAdminUpdateView)
+    UserDetailView, AdminLoginView, OAuthView, UserDataSummaryView, UserAdminUpdateView, UserStatusView)
 from .deployments import DeploymentsView
 from .clusters import (
     ClustersView, ClusterDetailView, ClusterNamespacesView,
@@ -18,10 +18,10 @@ from .roles import RolesView, RolesDetailView
 from .user_role import UserRolesView
 from .project import (
     ProjectsView, ProjectDetailView, UserProjectsView,
-    ProjectCPUView, ProjectMemoryUsageView, ProjectNetworkRequestView, ProjectStorageUsageView)
+    ProjectCPUView, ProjectMemoryUsageView, ProjectNetworkRequestView, ProjectStorageUsageView, ProjectStatusView, ProjectCountView)
 from .app import (AppsView, ProjectAppsView, AppDetailView, AppLogsView,
                   AppCpuUsageView, AppMemoryUsageView, AppNetworkUsageView, AppStorageUsageView,
-                  AppDataSummaryView, AppRevertView)
+                  AppDataSummaryView, AppRevertView, AppStatusView, AppCountView)
 from .registry import RegistriesView
 from .project_database import (ProjectDatabaseView, ProjectDatabaseDetailView, ProjectDatabaseAdminView,
                                ProjectDatabaseAdminDetailView, ProjectDatabaseResetView, ProjectDatabaseAdminResetView,

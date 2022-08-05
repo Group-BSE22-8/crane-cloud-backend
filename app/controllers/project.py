@@ -6,7 +6,8 @@ from app.helpers.kube import create_kube_clients, delete_cluster_app
 from app.models.user import User
 from app.models.clusters import Cluster
 from app.models.project import Project
-from app.schemas import ProjectSchema, MetricsSchema
+from app.models.app import App
+from app.schemas import ProjectSchema, MetricsSchema, StatusSchema, AppSchema
 import datetime
 from prometheus_http_client import Prometheus
 import json
@@ -608,3 +609,99 @@ class ProjectStorageUsageView(Resource):
             return dict(status='fail', message='No values found'), 404
 
         return dict(status='success', data=dict(storage_capacity=values, storage_percentage_usage=volume_perc_value)), 200
+
+
+class ProjectStatusView(Resource):
+
+    #@admin_required
+    def patch(self):
+
+        status_schema = StatusSchema()
+        app_schema = AppSchema(many=True)
+
+        project_data = request.get_json()
+        validated_update_data, errors = status_schema.load(project_data)
+
+        if errors:
+          return dict(status='fail', message=errors), 400
+
+        # check for existing project based on and id
+        project = Project.get_by_id(validated_update_data['id'])
+
+        if project:
+
+            if 'id' in validated_update_data:
+
+                project.status = validated_update_data['status']
+                updated_project = project.save()
+            
+                if not updated_project:
+                    return dict(status='fail', message='Internal Server Error'), 500
+
+
+                apps = App.find_all(project_id = validated_update_data['id'])
+                apps_data, errors = app_schema.dumps(apps)
+                apps_data_list = json.loads(apps_data)
+
+                for app_data in apps_data_list:
+                    # check for existing apps based on and id
+                    app = App.get_by_id(app_data['id'])
+
+                    if app:
+                        #return dict(status='fail', message='Internal Server Err'), 500
+                        app.status = validated_update_data['status']
+                        updated_app = app.save()
+                                    
+                        if not updated_app:
+                            return dict(status='fail', message='Internal Server Error'), 500
+
+ 
+                return dict(
+                    status="success",
+                    message=f"Project status updated successfully"
+                ), 200
+
+        else:
+            return dict(
+                status='fail',
+                message=f'Project does not exists'
+            ), 404
+
+
+
+class ProjectCountView(Resource):
+
+    #@admin_required
+    def get(self):
+        project_schema = ProjectSchema(many=True)
+
+        projects = Project.find_all()
+        project_data, errors = project_schema.dumps(projects)
+
+        if errors:
+          return dict(status='fail', message=errors), 400
+
+        project_data_list = json.loads(project_data)
+
+        active = 0
+        inactive = 0
+        deleted = 0
+
+        for project in project_data_list:
+            if project["status"] == 1:
+               active = active + 1
+            
+            elif project["status"] == 0:
+               inactive = inactive + 1
+            
+            elif project["status"] == 5:
+               deleted = deleted + 1
+
+        
+        return dict(
+            status='success',
+            data=dict(
+                active=active,
+                inactive=inactive,
+                deleted=deleted)
+        ), 200

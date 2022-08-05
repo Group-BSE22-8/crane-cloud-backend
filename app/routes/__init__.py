@@ -15,7 +15,7 @@ from app.controllers import (
     ProjectDatabaseView, ProjectDatabaseDetailView, ProjectDatabaseAdminView, ProjectDatabaseAdminDetailView,
     ProjectDatabaseResetView, ProjectDatabaseAdminResetView, ProjectDatabasePasswordResetView, ProjectDatabaseAdminPasswordResetView,
     ProjectDatabaseRetrievePasswordView, ProjectDatabaseAdminRetrievePasswordView, DatabaseStatsView, AppDataSummaryView,
-    UserAdminUpdateView, AppRevertView)
+    UserAdminUpdateView, AppRevertView, AppStatusView, UserStatusView, ProjectStatusView, ProjectCountView, AppCountView)
 
 
 api = Api()
@@ -35,6 +35,7 @@ api.add_resource(UserDetailView, '/users/<string:user_id>')
 api.add_resource(OAuthView, '/users/oauth')
 api.add_resource(UserDataSummaryView, '/users/summary')
 api.add_resource(UserAdminUpdateView, '/users/admin_update')
+api.add_resource(UserStatusView, '/user/status')
 
 
 # Deployments
@@ -94,6 +95,8 @@ api.add_resource(ProjectNetworkRequestView,
                  '/projects/<string:project_id>/metrics/network')
 api.add_resource(ProjectStorageUsageView,
                  '/projects/<string:project_id>/metrics/storage')
+api.add_resource(ProjectStatusView, '/project/status')
+api.add_resource(ProjectCountView, '/projects/count')
 
 # User Project routes
 api.add_resource(UserProjectsView, '/users/<string:user_id>/projects')
@@ -113,6 +116,9 @@ api.add_resource(
 api.add_resource(AppStorageUsageView,
                  '/projects/<string:project_id>/apps/<string:app_id>/metrics/storage')
 api.add_resource(AppDataSummaryView, '/apps/summary')
+api.add_resource(AppStatusView, '/app/status')
+api.add_resource(AppCountView, '/apps/count')
+
 
 # Registry routes
 api.add_resource(RegistriesView, '/registries')
