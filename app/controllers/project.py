@@ -6,8 +6,9 @@ from app.helpers.kube import create_kube_clients, delete_cluster_app
 from app.models.user import User
 from app.models.clusters import Cluster
 from app.models.project import Project
+from app.models.log import ProjectLog
 from app.models.app import App
-from app.schemas import ProjectSchema, MetricsSchema, StatusSchema, AppSchema
+from app.schemas import ProjectSchema, ProjectLogsSchema, MetricsSchema, StatusSchema, AppSchema
 import datetime
 from prometheus_http_client import Prometheus
 import json
@@ -15,6 +16,7 @@ from flask_restful import Resource, request
 from kubernetes import client
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt_claims
 from app.helpers.db_flavor import get_db_flavour
+from .log import LogsView
 
 
 class ProjectsView(Resource):
@@ -611,6 +613,7 @@ class ProjectStorageUsageView(Resource):
         return dict(status='success', data=dict(storage_capacity=values, storage_percentage_usage=volume_perc_value)), 200
 
 
+
 class ProjectStatusView(Resource):
 
     #@admin_required
@@ -637,7 +640,13 @@ class ProjectStatusView(Resource):
             
                 if not updated_project:
                     return dict(status='fail', message='Internal Server Error'), 500
-
+                
+                #logging this action
+                LogsView.saveProjectLog(
+                   validated_update_data['id'], 
+                   validated_update_data['user_id'],
+                   validated_update_data['status']
+                )
 
                 apps = App.find_all(project_id = validated_update_data['id'])
                 apps_data, errors = app_schema.dumps(apps)
@@ -655,7 +664,13 @@ class ProjectStatusView(Resource):
                         if not updated_app:
                             return dict(status='fail', message='Internal Server Error'), 500
 
- 
+                        #logging this action
+                        LogsView.saveAppLog(
+                            app_data['id'], 
+                            validated_update_data['user_id'],
+                            validated_update_data['status']
+                        )
+
                 return dict(
                     status="success",
                     message=f"Project status updated successfully"
@@ -704,4 +719,52 @@ class ProjectCountView(Resource):
                 active=active,
                 inactive=inactive,
                 deleted=deleted)
+        ), 200
+
+
+
+class ProjectLogView(Resource):
+
+    #@admin_required
+    def get(self):
+
+        logs_schema = ProjectLogsSchema(many=True)
+
+        project_logs = ProjectLog.find_all()
+        logs_data, errors = logs_schema.dumps(project_logs)
+
+        if errors:
+          return dict(status='fail', message=errors), 400
+
+        project_logs_list = json.loads(logs_data)
+
+        for log in project_logs_list:
+            user = User.get_by_id(log['performed_by'])
+
+            if user:
+               log['user'] = user.name        
+            
+            else:
+                return dict(
+                    status='fail',
+                    message=f'User does not exists'
+                ), 404
+        
+
+            project = Project.get_by_id(log['project_id'])
+
+            if project:
+               log['project'] = project.name        
+            
+            else:
+                return dict(
+                    status='fail',
+                    message=f'Project does not exists'
+                ), 404
+                
+
+        return dict(
+            status='success',
+            data=dict(
+                logs=project_logs_list)
         ), 200

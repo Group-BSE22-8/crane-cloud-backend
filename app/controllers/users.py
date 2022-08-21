@@ -3,11 +3,12 @@ import os
 from flask import current_app
 from flask_restful import Resource, request
 from flask_bcrypt import Bcrypt
-from app.schemas import UserSchema, UserGraphSchema, StatusSchema, ProjectSchema, AppSchema
+from app.schemas import UserSchema, UserLogsSchema, UserGraphSchema, StatusSchema, ProjectSchema, AppSchema
 from app.models.user import User
 from app.models.project import Project
 from app.models.app import App
 from app.models.role import Role
+from app.models.log import UserLog
 from app.helpers.confirmation import send_verification
 from app.helpers.token import validate_token
 from app.helpers.decorators import admin_required
@@ -17,6 +18,7 @@ import string
 from sqlalchemy import func, column
 from app.models import db
 from datetime import date, datetime
+from .log import LogsView
 
 
 class UsersView(Resource):
@@ -774,6 +776,12 @@ class UserStatusView(Resource):
                 if not updated_user:
                     return dict(status='fail', message='Internal Server Error'), 500
 
+                #logging this action
+                LogsView.saveUserLog(
+                   validated_update_data['id'], 
+                   validated_update_data['user_id'],
+                   validated_update_data['status']
+                )
 
                 projects = Project.find_all(owner_id=validated_update_data['id'])
                 project_data, errors = project_schema.dumps(projects)
@@ -789,6 +797,13 @@ class UserStatusView(Resource):
                     if not updated_project:
                         return dict(status='fail', message='Internal Server Error'), 500
 
+                    #logging this action
+                    LogsView.saveProjectLog(
+                        proj['id'], 
+                        validated_update_data['user_id'],
+                        validated_update_data['status']
+                    )
+
                     # check for existing apps based on and id
                     apps = App.find_all(project_id=proj['id'])
                     app_data, errors = app_schema.dumps(apps)
@@ -801,6 +816,13 @@ class UserStatusView(Resource):
                     
                         if not updated_app:
                             return dict(status='fail', message='Internal Server Error'), 500
+
+                        #logging this action
+                        LogsView.saveAppLog(
+                            app_data['id'], 
+                            validated_update_data['user_id'],
+                            validated_update_data['status']
+                        )
 
                 return dict(
                     status="success",
@@ -844,4 +866,52 @@ class UserCountView(Resource):
             data=dict(
                 active=active,
                 inactive=inactive)
+        ), 200
+
+
+
+class UserLogView(Resource):
+
+    #@admin_required
+    def get(self):
+
+        logs_schema = UserLogsSchema(many=True)
+
+        user_logs = UserLog.find_all()
+        logs_data, errors = logs_schema.dumps(user_logs)
+
+        if errors:
+          return dict(status='fail', message=errors), 400
+
+        user_logs_list = json.loads(logs_data)
+
+        for log in user_logs_list:
+            performed_by = User.get_by_id(log['performed_by'])
+
+            if performed_by:
+               log['user'] = performed_by.name        
+            
+            else:
+                return dict(
+                    status='fail',
+                    message=f'User does not exists'
+                ), 404
+        
+
+            user = User.get_by_id(log['user_id'])
+
+            if user:
+               log['user'] = user.name        
+            
+            else:
+                return dict(
+                    status='fail',
+                    message=f'User does not exists'
+                ), 404
+                
+
+        return dict(
+            status='success',
+            data=dict(
+                logs=user_logs_list)
         ), 200

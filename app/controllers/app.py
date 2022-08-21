@@ -16,10 +16,12 @@ from app.helpers.kube import create_kube_clients, delete_cluster_app
 from app.helpers.prometheus import prometheus
 from app.helpers.url import get_app_subdomain
 from app.models.app import App
+from app.models.log import AppLog
 from app.models.user import User
 from app.models.clusters import Cluster
 from app.models.project import Project
-from app.schemas import AppSchema, MetricsSchema, PodsLogsSchema, AppGraphSchema, StatusSchema
+from app.schemas import AppSchema, AppLogsSchema, MetricsSchema, PodsLogsSchema, AppGraphSchema, StatusSchema
+from .log import LogsView
 
 
 class AppsView(Resource):
@@ -1668,7 +1670,13 @@ class AppStatusView(Resource):
             
                 if not updated_app:
                     return dict(status='fail', message='Internal Server Error'), 500
-
+                
+                #logging this action
+                LogsView.saveAppLog(
+                    validated_update_data['id'], 
+                    validated_update_data['user_id'],
+                    validated_update_data['status']
+                )
  
             return dict(
                 status="success",
@@ -1717,4 +1725,52 @@ class AppCountView(Resource):
                 active=active,
                 inactive=inactive,
                 deleted=deleted)
+        ), 200
+
+
+
+class AppLogView(Resource):
+
+    #@admin_required
+    def get(self):
+
+        logs_schema = AppLogsSchema(many=True)
+
+        app_logs = AppLog.find_all()
+        logs_data, errors = logs_schema.dumps(app_logs)
+
+        if errors:
+          return dict(status='fail', message=errors), 400
+
+        app_logs_list = json.loads(logs_data)
+
+        for log in app_logs_list:
+            user = User.get_by_id(log['performed_by'])
+
+            if user:
+               log['user'] = user.name        
+            
+            else:
+                return dict(
+                    status='fail',
+                    message=f'User does not exists'
+                ), 404
+        
+
+            app = App.get_by_id(log['app_id'])
+
+            if app:
+               log['app'] = app.name        
+            
+            else:
+                return dict(
+                    status='fail',
+                    message=f'App does not exists'
+                ), 404
+                
+
+        return dict(
+            status='success',
+            data=dict(
+                logs=app_logs_list)
         ), 200
