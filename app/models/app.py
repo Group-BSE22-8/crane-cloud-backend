@@ -15,6 +15,6 @@ class App(ModelMixin):
     port = db.Column(db.Integer, nullable=False)
     date_created = db.Column(db.DateTime, default=db.func.current_timestamp())
     has_custom_domain = db.Column(db.Boolean, nullable=False, default=False)
-    status = db.Column(db.Integer, nullable=True)
+    status = db.Column(db.Integer, nullable=True, default=1)
     it_status = db.Column(db.Integer, nullable=True)
 

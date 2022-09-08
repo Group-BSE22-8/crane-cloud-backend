@@ -7,6 +7,7 @@ class AppLogsSchema(Schema):
     id = fields.UUID(dump_only=True)
     app_id = fields.UUID(dump_only=True)
     action = fields.String()
+    comment = fields.String()
     performed_by = fields.UUID(dump_only=True)
     date_created = fields.Date(dump_only=True)
 
@@ -19,6 +20,7 @@ class ProjectLogsSchema(Schema):
     id = fields.UUID(dump_only=True)
     project_id = fields.UUID(dump_only=True)
     action = fields.String()
+    comment = fields.String()
     performed_by = fields.UUID(dump_only=True)
     date_created = fields.Date(dump_only=True)
 
@@ -28,6 +30,7 @@ class UserLogsSchema(Schema):
     id = fields.UUID(dump_only=True)
     user_id = fields.UUID(dump_only=True)
     action = fields.String()
+    comment = fields.String()
     performed_by = fields.UUID(dump_only=True)
     date_created = fields.Date(dump_only=True)
 

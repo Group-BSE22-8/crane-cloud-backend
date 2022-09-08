@@ -1675,13 +1675,14 @@ class AppStatusView(Resource):
                 LogsView.saveAppLog(
                     validated_update_data['id'], 
                     validated_update_data['user_id'],
-                    validated_update_data['status']
+                    validated_update_data['status'],
+                    validated_update_data['comment']
                 )
  
             return dict(
                 status="success",
                 message=f"App status updated successfully"
-            ), 200
+            ), 20
 
         else:
             return dict(

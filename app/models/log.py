@@ -9,6 +9,7 @@ class UserLog(ModelMixin):
     id = db.Column(UUID(as_uuid=True), primary_key=True, server_default=sa_text("uuid_generate_v4()"))
     user_id = db.Column(UUID(as_uuid=True), db.ForeignKey('user.id'), nullable=False)
     action = db.Column(db.String(256), nullable=True)
+    comment = db.Column(db.String(256), nullable=True)
     performed_by = db.Column(UUID(as_uuid=True), db.ForeignKey('user.id'), nullable=False)
     date_created = db.Column(db.DateTime, default=db.func.current_timestamp())
 
@@ -19,6 +20,7 @@ class ProjectLog(ModelMixin):
     id = db.Column(UUID(as_uuid=True), primary_key=True, server_default=sa_text("uuid_generate_v4()"))
     project_id = db.Column(UUID(as_uuid=True), db.ForeignKey('project.id'), nullable=False)
     action = db.Column(db.String(256), nullable=True)
+    comment = db.Column(db.String(256), nullable=True)
     performed_by = db.Column(UUID(as_uuid=True), db.ForeignKey('user.id'), nullable=False)
     date_created = db.Column(db.DateTime, default=db.func.current_timestamp())
 
@@ -28,6 +30,7 @@ class AppLog(ModelMixin):
     id = db.Column(UUID(as_uuid=True), primary_key=True, server_default=sa_text("uuid_generate_v4()"))
     app_id = db.Column(UUID(as_uuid=True), db.ForeignKey('app.id'), nullable=False)
     action = db.Column(db.String(256), nullable=True)
+    comment = db.Column(db.String(256), nullable=True)
     performed_by = db.Column(UUID(as_uuid=True), db.ForeignKey('user.id'), nullable=False)
     date_created = db.Column(db.DateTime, default=db.func.current_timestamp())
 
@@ -35,8 +38,9 @@ class AppLog(ModelMixin):
 class ClusterLog(ModelMixin):
     __tablename__ = 'cluster_logs'
     id = db.Column(UUID(as_uuid=True), primary_key=True, server_default=sa_text("uuid_generate_v4()"))
-    cluster_id = db.Column(UUID(as_uuid=True), db.ForeignKey('clusters.id'), nullable=False)
+    cluster_id = db.Column(db.String(256), nullable=True)
     status = db.Column(db.String(256), nullable=True)
+    date_created = db.Column(db.DateTime, default=db.func.current_timestamp())
 
 
 class NodeLog(ModelMixin):

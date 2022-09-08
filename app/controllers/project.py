@@ -6,9 +6,10 @@ from app.helpers.kube import create_kube_clients, delete_cluster_app
 from app.models.user import User
 from app.models.clusters import Cluster
 from app.models.project import Project
+from app.models.project_database import ProjectDatabase
 from app.models.log import ProjectLog
 from app.models.app import App
-from app.schemas import ProjectSchema, ProjectLogsSchema, MetricsSchema, StatusSchema, AppSchema
+from app.schemas import ProjectSchema, ProjectDatabaseSchema, ProjectLogsSchema, MetricsSchema, StatusSchema, AppSchema
 import datetime
 from prometheus_http_client import Prometheus
 import json
@@ -624,7 +625,7 @@ class ProjectStatusView(Resource):
 
         project_data = request.get_json()
         validated_update_data, errors = status_schema.load(project_data)
-
+        
         if errors:
           return dict(status='fail', message=errors), 400
 
@@ -645,7 +646,8 @@ class ProjectStatusView(Resource):
                 LogsView.saveProjectLog(
                    validated_update_data['id'], 
                    validated_update_data['user_id'],
-                   validated_update_data['status']
+                   validated_update_data['status'],
+                   validated_update_data['comment']
                 )
 
                 apps = App.find_all(project_id = validated_update_data['id'])
@@ -668,7 +670,8 @@ class ProjectStatusView(Resource):
                         LogsView.saveAppLog(
                             app_data['id'], 
                             validated_update_data['user_id'],
-                            validated_update_data['status']
+                            validated_update_data['status'],
+                            validated_update_data['comment']
                         )
 
                 return dict(
@@ -723,6 +726,75 @@ class ProjectCountView(Resource):
 
 
 
+
+class SpecificProjectsView(Resource):
+
+    #@admin_required
+    def post(self):
+        project_schema = ProjectSchema(many=True)
+
+        project_data = request.get_json()
+
+        projects = Project.find_all(owner_id = project_data['user_id'])
+        project_data, errors = project_schema.dumps(projects)
+
+        if errors:
+          return dict(status='fail', message=errors), 400
+
+        project_data_list = json.loads(project_data)
+
+        active_projects = 0
+        inactive_projects = 0
+        deleted_projects = 0
+        active_apps = 0
+        inactive_apps = 0
+        deleted_apps = 0
+
+        for project in project_data_list:
+            if project["status"] == 1:
+               active_projects = active_projects + 1
+            
+            elif project["status"] == 0:
+               inactive_projects = inactive_projects + 1
+            
+            elif project["status"] == 5:
+               deleted_projects = deleted_projects + 1
+
+
+            app_schema = AppSchema(many=True)
+            apps = App.find_all(project_id = project['id'])
+            app_data, errors = app_schema.dumps(apps)
+
+            #if errors:
+            #  return dict(status='fail', message=errors), 400
+
+            app_data_list = json.loads(app_data)
+
+            for app in app_data_list:
+                if app["status"] == 1:
+                    active_apps = active_apps + 1
+                
+                elif app["status"] == 0:
+                    inactive_apps = inactive_apps + 1
+            
+                elif app["status"] == 5:
+                    deleted_apps = deleted_apps + 1
+
+        
+        return dict(
+            status='success',
+            data=dict(
+                active_projects=active_projects,
+                inactive_projects=inactive_projects,
+                deleted_projects=deleted_projects,
+                active_apps=active_apps,
+                inactive_apps=inactive_apps,
+                deleted_apps=deleted_apps,
+                projects=project_data_list)
+        ), 200
+
+
+
 class ProjectLogView(Resource):
 
     #@admin_required
@@ -767,4 +839,55 @@ class ProjectLogView(Resource):
             status='success',
             data=dict(
                 logs=project_logs_list)
+        ), 200
+
+
+class ProjectDBView(Resource):
+    #@admin_required
+    def get(self):
+        project_schema = ProjectDatabaseSchema(many=True)
+
+        project_databases = ProjectDatabase.find_all()
+        project_database, errors = project_schema.dumps(project_databases)
+
+        if errors:
+            return dict(status='fail', message=errors), 400
+
+        project_database_list = json.loads(project_database)
+
+        count = 0
+
+        for database in project_database_list:
+            count = count + 1
+
+        
+        return dict(
+            status='success',
+            data=dict(databases = count)
+        ), 200
+
+
+class ProjectDBSView(Resource):
+    #@admin_required
+    def post(self):
+        project_schema = ProjectDatabaseSchema(many=True)
+        project_data = request.get_json()
+
+        project_databases = ProjectDatabase.find_all(project_id = project_data['project_id'])
+        project_database, errors = project_schema.dumps(project_databases)
+
+        if errors:
+            return dict(status='fail', message=errors), 400
+
+        project_database_list = json.loads(project_database)
+
+        count = 0
+
+        for database in project_database_list:
+            count = count + 1
+
+        
+        return dict(
+            status='success',
+            data=dict(databases = count)
         ), 200

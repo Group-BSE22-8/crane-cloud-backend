@@ -4,7 +4,7 @@ from .index import IndexView
 from .users import (
     UsersView, UserLoginView, UserEmailVerificationView,
     EmailVerificationRequest, ForgotPasswordView, ResetPasswordView,
-    UserDetailView, AdminLoginView, OAuthView, UserDataSummaryView, UserAdminUpdateView, UserStatusView, UserLogView)
+    UserDetailView, AdminLoginView, OAuthView, UserDataSummaryView, UserAdminUpdateView, UserStatusView, UserCountView, UserLogView)
 from .deployments import DeploymentsView
 from .clusters import (
     ClustersView, ClusterDetailView, ClusterNamespacesView,
@@ -13,12 +13,12 @@ from .clusters import (
     ClusterPvcDetailView, ClusterPVsView, ClusterPVDetailView,
     ClusterPodsView, ClusterPodDetailView, ClusterServicesView,
     ClusterServiceDetailView, ClusterJobsView, ClusterJobDetailView,
-    ClusterStorageClassView, ClusterStorageClassDetailView)
+    ClusterStorageClassView, ClusterStorageClassDetailView, ClusterCountView)
 from .roles import RolesView, RolesDetailView
 from .user_role import UserRolesView
 from .project import (
     ProjectsView, ProjectDetailView, UserProjectsView,
-    ProjectCPUView, ProjectMemoryUsageView, ProjectNetworkRequestView, ProjectStorageUsageView, ProjectStatusView, ProjectCountView, ProjectLogView)
+    ProjectCPUView, ProjectMemoryUsageView, ProjectNetworkRequestView, ProjectStorageUsageView, ProjectStatusView, ProjectCountView, ProjectLogView, ProjectDBView, ProjectDBSView, SpecificProjectsView)
 from .app import (AppsView, ProjectAppsView, AppDetailView, AppLogsView,
                   AppCpuUsageView, AppMemoryUsageView, AppNetworkUsageView, AppStorageUsageView,
                   AppDataSummaryView, AppRevertView, AppStatusView, AppCountView, AppLogView)
@@ -27,3 +27,4 @@ from .project_database import (ProjectDatabaseView, ProjectDatabaseDetailView, P
                                ProjectDatabaseAdminDetailView, ProjectDatabaseResetView, ProjectDatabaseAdminResetView,
                                ProjectDatabasePasswordResetView, ProjectDatabaseAdminPasswordResetView,
                                ProjectDatabaseRetrievePasswordView, ProjectDatabaseAdminRetrievePasswordView, DatabaseStatsView)
+from .log import LogsView

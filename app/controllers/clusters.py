@@ -847,3 +847,30 @@ class ClusterStorageClassDetailView(Resource):
 
         except Exception as e:
             return dict(status='fail', message=str(e)), 500
+
+
+
+class ClusterCountView(Resource):
+
+    #@admin_required
+    def get(self):
+        cluster_schema = ClusterSchema(many=True)
+
+        clusters = Cluster.find_all()
+        cluster_data, errors = cluster_schema.dumps(clusters)
+
+        if errors:
+          return dict(status='fail', message=errors), 400
+
+        cluster_data_list = json.loads(cluster_data)
+
+        count = 0
+
+        for cluster in cluster_data_list:
+            count = count + 1
+
+        return dict(
+            status='success',
+            data=dict(
+                count=count)
+        ), 200

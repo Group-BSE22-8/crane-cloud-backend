@@ -16,13 +16,16 @@ from app.controllers import (
     ProjectDatabaseResetView, ProjectDatabaseAdminResetView, ProjectDatabasePasswordResetView, ProjectDatabaseAdminPasswordResetView,
     ProjectDatabaseRetrievePasswordView, ProjectDatabaseAdminRetrievePasswordView, DatabaseStatsView, AppDataSummaryView,
     UserAdminUpdateView, AppRevertView, AppStatusView, UserStatusView, ProjectStatusView, ProjectCountView, AppCountView, AppLogView,
-    UserLogView, ProjectLogView)
+    UserLogView, ProjectLogView, UserCountView, ClusterCountView, ProjectDBView, ProjectDBSView, LogsView, SpecificProjectsView)
 
 
 api = Api()
 
 # Index route
 api.add_resource(IndexView, '/')
+
+# Logs route
+api.add_resource(LogsView, '/logs/all_logs')
 
 # User routes
 api.add_resource(UsersView, '/users', endpoint='users')
@@ -37,6 +40,7 @@ api.add_resource(OAuthView, '/users/oauth')
 api.add_resource(UserDataSummaryView, '/users/summary')
 api.add_resource(UserAdminUpdateView, '/users/admin_update')
 api.add_resource(UserStatusView, '/user/status')
+api.add_resource(UserCountView, '/users/count')
 api.add_resource(UserLogView, '/users/user_logs')
 
 
@@ -76,6 +80,7 @@ api.add_resource(ClusterStorageClassView,
                  '/clusters/<string:cluster_id>/storage_classes')
 api.add_resource(ClusterStorageClassDetailView,
                  '/clusters/<string:cluster_id>/storage_classes/<string:storage_class_name>')
+api.add_resource(ClusterCountView, '/clusters/count')
 
 # Roles routes
 api.add_resource(RolesView, '/roles', endpoint='roles')
@@ -100,6 +105,9 @@ api.add_resource(ProjectStorageUsageView,
 api.add_resource(ProjectStatusView, '/project/status')
 api.add_resource(ProjectCountView, '/projects/count')
 api.add_resource(ProjectLogView, '/projects/project_logs')
+api.add_resource(ProjectDBView, '/projects/databases')
+api.add_resource(ProjectDBSView, '/projects/specific_databases')
+api.add_resource(SpecificProjectsView, '/projects/specific_projects')
 
 # User Project routes
 api.add_resource(UserProjectsView, '/users/<string:user_id>/projects')

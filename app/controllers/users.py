@@ -780,7 +780,8 @@ class UserStatusView(Resource):
                 LogsView.saveUserLog(
                    validated_update_data['id'], 
                    validated_update_data['user_id'],
-                   validated_update_data['status']
+                   validated_update_data['status'],
+                   validated_update_data['comment']
                 )
 
                 projects = Project.find_all(owner_id=validated_update_data['id'])
@@ -801,7 +802,8 @@ class UserStatusView(Resource):
                     LogsView.saveProjectLog(
                         proj['id'], 
                         validated_update_data['user_id'],
-                        validated_update_data['status']
+                        validated_update_data['status'],
+                        validated_update_data['comment']
                     )
 
                     # check for existing apps based on and id
@@ -821,7 +823,8 @@ class UserStatusView(Resource):
                         LogsView.saveAppLog(
                             app_data['id'], 
                             validated_update_data['user_id'],
-                            validated_update_data['status']
+                            validated_update_data['status'],
+                            validated_update_data['comment']
                         )
 
                 return dict(
@@ -869,6 +872,43 @@ class UserCountView(Resource):
         ), 200
 
 
+class UserCountView(Resource):
+
+    #@admin_required
+    def get(self):
+        user_schema = UserSchema(many=True)
+
+        users = User.find_all()
+        user_data, errors = user_schema.dumps(users)
+
+        if errors:
+          return dict(status='fail', message=errors), 400
+
+        user_data_list = json.loads(user_data)
+
+        active = 0
+        inactive = 0
+        deleted = 0
+
+        for user in user_data_list:
+            if user["status"] == 1:
+               active = active + 1
+            
+            elif user["status"] == 0:
+               inactive = inactive + 1
+        
+            elif user["status"] == 5:
+               deleted = deleted + 1
+
+        return dict(
+            status='success',
+            data=dict(
+                active=active,
+                inactive=inactive,
+                deleted=deleted)
+        ), 200
+
+
 
 class UserLogView(Resource):
 
@@ -901,7 +941,7 @@ class UserLogView(Resource):
             user = User.get_by_id(log['user_id'])
 
             if user:
-               log['user'] = user.name        
+               log['target_user'] = user.name        
             
             else:
                 return dict(
